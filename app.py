@@ -344,30 +344,30 @@ def render_summary_card(row):
     st.markdown("### 📘 Trading Summary")
 
     html = f"""
-    <div style="background-color:#f8f9fa;padding:20px;border-radius:10px;border:1px solid #ddd; font-size:15px;">
+<div style="background-color:#f8f9fa;padding:20px;border-radius:10px;border:1px solid #ddd; font-size:15px;">
 
-        <h3 style="color:#4CC9F0; margin-bottom:5px;">🎯 Overview</h3>
-        <b>Ticker:</b> {row['Ticker']}<br>
-        <b>Signal:</b> {row['FINAL_SIGNAL']}<br>
-        <b>Shape:</b> {row['Shape']}<br>
-        <b>Insights:</b> {row['INSIGHT_TAGS']}<br>
-        <b>Next Action:</b> {row['NEXT_ACTION']}<br><br>
+<h3 style="color:#4CC9F0; margin-bottom:5px;">🎯 Overview</h3>
+<b>Ticker:</b> {row['Ticker']}<br>
+<b>Signal:</b> {row['FINAL_SIGNAL']}<br>
+<b>Shape:</b> {row['Shape']}<br>
+<b>Insights:</b> {row['INSIGHT_TAGS']}<br>
+<b>Next Action:</b> {row['NEXT_ACTION']}<br><br>
 
-        <h3 style="color:#4CC9F0; margin-bottom:5px;">📈 Interpretation</h3>
-        {format_section(summary, "Interpretation:", "Your Trading Plan")}
+<h3 style="color:#4CC9F0; margin-bottom:5px;">📈 Interpretation</h3>
+{format_section(summary, "Interpretation:", "Your Trading Plan")}
 
-        <br>
+<br>
 
-        <h3 style="color:#4CC9F0; margin-bottom:5px;">📝 Trade Plan</h3>
-        {format_section(summary, "Primary Entry:", "No-Trade Conditions:")}
+<h3 style="color:#4CC9F0; margin-bottom:5px;">📝 Trade Plan</h3>
+{format_section(summary, "Primary Entry:", "No-Trade Conditions:")}
 
-        <br>
+<br>
 
-        <h3 style="color:#F72585; margin-bottom:5px;">⚠️ Risk Conditions</h3>
-        {format_section(summary, "No-Trade Conditions:", None)}
+<h3 style="color:#F72585; margin-bottom:5px;">⚠️ Risk Conditions</h3>
+{format_section(summary, "No-Trade Conditions:", None)}
 
-    </div>
-    """
+</div>
+"""
 
     st.markdown(html, unsafe_allow_html=True)
 
@@ -467,6 +467,7 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
 
 
