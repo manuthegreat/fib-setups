@@ -356,8 +356,12 @@ def render_summary_card(row):
         <h3 style="color:#4CC9F0; margin-bottom:5px;">📈 Interpretation</h3>
         {format_section(summary, "Interpretation:", "Your Trading Plan")}
 
+        <br>
+
         <h3 style="color:#4CC9F0; margin-bottom:5px;">📝 Trade Plan</h3>
         {format_section(summary, "Primary Entry:", "No-Trade Conditions:")}
+
+        <br>
 
         <h3 style="color:#F72585; margin-bottom:5px;">⚠️ Risk Conditions</h3>
         {format_section(summary, "No-Trade Conditions:", None)}
@@ -374,7 +378,7 @@ def format_section(summary_text, start, end):
             section = section.split(end, 1)[0]
         lines = [f"• {line.strip()}" for line in section.split("\n") if line.strip()]
         return "<br>".join(lines)
-    except Exception:
+    except:
         return "N/A"
 
 
@@ -463,5 +467,6 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
 
