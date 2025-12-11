@@ -158,7 +158,7 @@ with col4:
 
 
 # ---------------------------------------------------------
-# Ranked Dashboard (Fully Working Click-to-Select Version)
+# Ranked Dashboard (Single-Select Radio Style)
 # ---------------------------------------------------------
 st.write("### Ranked Dashboard (Filtered)")
 
@@ -169,27 +169,29 @@ ranked_table = df_view[[
     "INSIGHT_TAGS", "NEXT_ACTION"
 ]].reset_index(drop=True)
 
-# 2️⃣ Add selection column for user click
+# 2️⃣ Create radio-style selection values (one per row)
 ranked_table_display = ranked_table.copy()
-ranked_table_display["Select"] = False
+ranked_table_display.insert(0, "Select", [""] * len(ranked_table))   # adds column BEFORE Ticker
 
-# 3️⃣ Display the table
+# 3️⃣ Show table (no editing allowed)
 selected_table = st.data_editor(
     ranked_table_display,
     use_container_width=True,
     hide_index=True,
-    key="ranked_table",
+    key="ranked_table_display",
+    disabled=True
 )
 
-# 4️⃣ Detect which row is selected (Select == True)
-selected_rows = [
-    idx for idx, row in selected_table.iterrows()
-    if row["Select"] is True
-]
+# 4️⃣ Build a real single-select dropdown BELOW table
+row_index = st.radio(
+    "Select a ticker:",
+    options=list(range(len(ranked_table))),
+    format_func=lambda i: f"{ranked_table.loc[i, 'Ticker']} – {ranked_table.loc[i, 'FINAL_SIGNAL']}",
+    horizontal=False
+)
 
-if selected_rows:
-    selected_idx = selected_rows[0]
-    st.session_state.selected_ticker = ranked_table.loc[selected_idx, "Ticker"]
+# Store selected ticker
+st.session_state.selected_ticker = ranked_table.loc[row_index, "Ticker"]
 
 # ---------------------------------------------------------
 # Enhanced Chart Function (stable: price+FIB, then MACD+RSI)
@@ -486,6 +488,7 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
 
 
