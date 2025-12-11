@@ -161,14 +161,27 @@ with col4:
 # Data Table
 # ---------------------------------------------------------
 st.write("### Ranked Dashboard (Filtered)")
-st.dataframe(
-    df_view[[
-        "Ticker", "FINAL_SIGNAL", "Shape",
-        "BREAKOUT_PRESSURE", "PERFECT_ENTRY", "READINESS_SCORE",
-        "INSIGHT_TAGS", "NEXT_ACTION"
-    ]].reset_index(drop=True),
+
+ranked_table = df_view[[
+    "Ticker", "FINAL_SIGNAL", "Shape",
+    "BREAKOUT_PRESSURE", "PERFECT_ENTRY", "READINESS_SCORE",
+    "INSIGHT_TAGS", "NEXT_ACTION"
+]].reset_index(drop=True)
+
+selected_row = st.data_editor(
+    ranked_table,
     use_container_width=True,
+    hide_index=True,
+    key="ranked_table",
 )
+
+# Detect which row was clicked
+cursor = st.session_state.get("ranked_table_cursor")
+
+if cursor is not None:
+    st.session_state.selected_ticker = ranked_table.loc[cursor, "Ticker"]
+
+
 
 
 # ---------------------------------------------------------
@@ -385,33 +398,32 @@ def format_section(summary_text, start, end):
 # ---------------------------------------------------------
 # Ticker Drilldown
 # ---------------------------------------------------------
-st.write("### Ticker Drilldown")
+# Get selected ticker
+ticker_selected = st.session_state.get("selected_ticker", None)
 
-default_ticker = df_view["Ticker"].iloc[0]
+if ticker_selected:
+    row_sel = df_view[df_view["Ticker"] == ticker_selected].iloc[0]
 
-selected_ticker = st.selectbox(
-    "Select a ticker",
-    options=df_view["Ticker"].unique(),
-    index=list(df_view["Ticker"].unique()).index(default_ticker),
-)
+    st.write(f"### 📌 Selected: **{ticker_selected}**")
+    
+    # Top metrics
+    colA, colB, colC, colD = st.columns(4)
+    with colA:
+        st.metric("Signal", row_sel["FINAL_SIGNAL"])
+    with colB:
+        st.metric("Readiness", f"{row_sel['READINESS_SCORE']:.2f}")
+    with colC:
+        st.metric("Breakout Pressure", f"{row_sel['BREAKOUT_PRESSURE']:.2f}")
+    with colD:
+        st.metric("Perfect Entry", f"{row_sel['PERFECT_ENTRY']:.2f}" if pd.notna(row_sel["PERFECT_ENTRY"]) else "N/A")
 
-row_sel = df_view[df_view["Ticker"] == selected_ticker].iloc[0]
+    plot_ticker_chart(df_all, row_sel, lookback_days=lookback_days)
 
-colA, colB, colC, colD = st.columns(4)
-with colA:
-    st.metric("Signal", row_sel["FINAL_SIGNAL"])
-with colB:
-    st.metric("Readiness", f"{row_sel['READINESS_SCORE']:.2f}")
-with colC:
-    st.metric("Breakout Pressure", f"{row_sel['BREAKOUT_PRESSURE']:.2f}")
-with colD:
-    st.metric("Perfect Entry", f"{row_sel['PERFECT_ENTRY']:.2f}" if pd.notna(row_sel["PERFECT_ENTRY"]) else "N/A")
+    render_summary_card(row_sel)
+else:
+    st.info("Click a row in the table to display charts and trading summary.")
 
-st.write(f"**Shape:** {row_sel['Shape']}  |  **Insights:** {row_sel['INSIGHT_TAGS']}")
 
-plot_ticker_chart(df_all, row_sel, lookback_days=lookback_days)
-
-render_summary_card(row_sel)
 
 st.write("---")
 st.subheader("📘 Indicator Explanations")
@@ -467,6 +479,7 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
 
 
