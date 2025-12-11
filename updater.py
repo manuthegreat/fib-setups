@@ -1,9 +1,9 @@
 """
-data_loader.py
+updater.py (FAST VERSION)
 
 ✓ Builds SP500, HSI, STI universes
 ✓ Downloads last 600 days of OHLC from Yahoo
-✓ Batches requests (fast + avoids throttles)
+✓ Parallel download using ThreadPoolExecutor (20 workers)
 ✓ Returns ONE CLEAN MERGED DATAFRAME
 ✓ No parquet saving, no disk IO
 """
@@ -12,7 +12,7 @@ import pandas as pd
 import requests
 from io import StringIO
 import yfinance as yf
-from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 
@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 # ==========================================================
 
 def get_sp500_universe():
+    """Scrapes SP500 tickers from Wikipedia."""
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
     headers = {"User-Agent": "Mozilla/5.0"}
     r = requests.get(url, headers=headers)
@@ -38,7 +39,9 @@ def get_sp500_universe():
     return df[["Ticker", "Name", "Sector"]]
 
 
+
 def get_hsi_universe():
+    """Scrapes Hang Seng Index constituents."""
     url = "https://en.wikipedia.org/wiki/Hang_Seng_Index"
     headers = {"User-Agent": "Mozilla/5.0"}
     r = requests.get(url, headers=headers)
@@ -76,7 +79,9 @@ def get_hsi_universe():
     return df[["Ticker", "Name", "Sector"]]
 
 
+
 def get_sti_universe():
+    """Hardcoded STI constituents (accurate as of 2024)."""
     data = [
         ("D05.SI", "DBS Group Holdings", "Financials"),
         ("U11.SI", "United Overseas Bank", "Financials"),
@@ -113,74 +118,91 @@ def get_sti_universe():
     return pd.DataFrame(data, columns=["Ticker", "Name", "Sector"])
 
 
+
 # ==========================================================
-# 2. YAHOO DOWNLOADER (600 days)
+# 2. FAST YAHOO DOWNLOADER (Parallel Threads)
 # ==========================================================
 
-def download_yahoo_prices(tickers, label, period="600d"):
+def fast_fetch(ticker, period="600d", label="UNKNOWN"):
     """
-    Downloads last 600 days of OHLC for a list of tickers.
-    Batches of 40 tickers to avoid throttling.
-    Returns a list of clean DataFrames.
+    Fetch OHLC data for ONE ticker.
+    Called inside ThreadPoolExecutor.
     """
-    print(f"\nDownloading {label}: {len(tickers)} tickers")
+    try:
+        df = yf.download(ticker, period=period, auto_adjust=False, progress=False, threads=False)
+        if df is None or df.empty:
+            return None
+        
+        df = df.reset_index()
+        df["Ticker"] = ticker
+        df["Index"] = label
+        return df
 
-    batch_size = 40
+    except Exception:
+        return None
+
+
+
+def download_yahoo_prices(tickers, label, period="600d", max_workers=20):
+    """
+    FAST VERSION:
+    - Downloads each ticker in parallel (20 threads default)
+    - Much faster than batch download
+    - Handles failures gracefully
+    """
+    print(f"\nDownloading {label}: {len(tickers)} tickers in parallel…")
+
     frames = []
     failed = []
 
-    for i in range(0, len(tickers), batch_size):
-        batch = tickers[i:i + batch_size]
-        print(f"  Batch {i//batch_size + 1}: {len(batch)} tickers")
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(fast_fetch, t, period, label): t for t in tickers}
 
-        try:
-            data = yf.download(batch, period=period, group_by="ticker", auto_adjust=False, threads=True)
-        except Exception:
-            failed.extend(batch)
-            continue
+        for future in as_completed(futures):
+            t = futures[future]
+            df = future.result()
 
-        for t in batch:
-            try:
-                df = data[t].dropna().copy()
-                df["Ticker"] = t
-                df["Index"] = label
-                frames.append(df.reset_index())
-            except Exception:
+            if df is None:
                 failed.append(t)
+            else:
+                frames.append(df)
 
-    print(f"Completed {label}: {len(frames)} OK, {len(failed)} failed")
+    print(f"{label} completed — {len(frames)} OK, {len(failed)} failed")
     return frames
 
 
 
 # ==========================================================
-# 3. MASTER FUNCTION (dashboard/engine will call this)
+# 3. MASTER FUNCTION CALLED BY ENGINE / DASHBOARD
 # ==========================================================
 
 def load_all_market_data():
     """
-    Returns a merged OHLC dataframe for SP500 + HSI + STI
-    without saving anything to disk.
+    Returns a merged OHLC dataframe for:
+    - SP500
+    - HSI
+    - STI
+    Downloads ~600 tickers quickly using multithreading.
     """
-    print("Building universes...")
+    print("Building universes…")
 
     sp500 = get_sp500_universe()
-    hsi = get_hsi_universe()
-    sti = get_sti_universe()
+    hsi   = get_hsi_universe()
+    sti   = get_sti_universe()
 
     print("SP500:", len(sp500))
     print("HSI:  ", len(hsi))
     print("STI:  ", len(sti))
 
+    # Parallel fetch for each universe
     sp = download_yahoo_prices(sp500["Ticker"].tolist(), "SP500")
-    hs = download_yahoo_prices(hsi["Ticker"].tolist(), "HSI")
-    st = download_yahoo_prices(sti["Ticker"].tolist(), "STI")
+    hs = download_yahoo_prices(hsi["Ticker"].tolist(),   "HSI")
+    st = download_yahoo_prices(sti["Ticker"].tolist(),   "STI")
 
+    # Merge ALL
     combined = pd.concat(sp + hs + st, ignore_index=True)
 
-    # Standardize column order
-    combined.rename(columns={"Date": "Date"}, inplace=True)
     combined = combined.sort_values(["Ticker", "Date"]).reset_index(drop=True)
 
-    print("\nFinal merged dataframe shape:", combined.shape)
+    print("\nFINAL dataframe shape:", combined.shape)
     return combined
