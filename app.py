@@ -80,8 +80,6 @@ selected_insights = st.sidebar.multiselect(
     default=[]
 )
 
-st.sidebar.write("---")
-st.sidebar.write("Run this daily after market close / before open.")
 
 
 
@@ -398,3 +396,4 @@ render_summary_card(row_sel)
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
