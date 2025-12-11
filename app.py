@@ -32,7 +32,7 @@ These setups are evaluated using structural signals, retracement depth, momentum
 # Hide Streamlit sidebar toggle by default
 hide_sidebar = """
 <style>
-    [data-testid="stSidebar"] > div:first-child {display: none;}
+    button[kind="header"] {display: none !important;}
 </style>
 """
 st.markdown(hide_sidebar, unsafe_allow_html=True)
@@ -469,3 +469,4 @@ Evaluates the **quality of the retracement**, **cleanliness of the higher low**,
 
 Score > 80 normally signals an institution-grade entry structure.
 """)
+
