@@ -158,40 +158,45 @@ with col4:
 
 
 # ---------------------------------------------------------
-# Ranked Dashboard (Single-Select Radio Style)
+# Ranked Dashboard (Inline Radio Simulation)
 # ---------------------------------------------------------
 st.write("### Ranked Dashboard (Filtered)")
 
-# 1️⃣ Build ranked table
 ranked_table = df_view[[
     "Ticker", "FINAL_SIGNAL", "Shape",
     "BREAKOUT_PRESSURE", "PERFECT_ENTRY", "READINESS_SCORE",
     "INSIGHT_TAGS", "NEXT_ACTION"
 ]].reset_index(drop=True)
 
-# 2️⃣ Create radio-style selection values (one per row)
-ranked_table_display = ranked_table.copy()
-ranked_table_display.insert(0, "Select", [""] * len(ranked_table))   # adds column BEFORE Ticker
+# real selected index
+selected_index = st.session_state.get("selected_index", 0)
 
-# 3️⃣ Show table (no editing allowed)
-selected_table = st.data_editor(
+# Build a display table that visually shows a radio indicator
+ranked_table_display = ranked_table.copy()
+ranked_table_display.insert(
+    0,
+    "Select",
+    ["◉" if i == selected_index else "○" for i in range(len(ranked_table))]
+)
+
+# Show table (static)
+st.dataframe(
     ranked_table_display,
     use_container_width=True,
-    hide_index=True,
-    key="ranked_table_display",
-    disabled=True
+    hide_index=True
 )
 
-# 4️⃣ Build a real single-select dropdown BELOW table
-row_index = st.radio(
+# Real radio input (hidden visually)
+selected_index = st.radio(
     "Select a ticker:",
     options=list(range(len(ranked_table))),
-    format_func=lambda i: f"{ranked_table.loc[i, 'Ticker']} – {ranked_table.loc[i, 'FINAL_SIGNAL']}",
-    horizontal=False
+    index=selected_index,
+    format_func=lambda i: f"{ranked_table.loc[i, 'Ticker']} – {ranked_table.loc[i, 'FINAL_SIGNAL']}"
 )
 
-# Store selected ticker
-st.session_state.selected_ticker = ranked_table.loc[row_index, "Ticker"]
+# Update stored selection
+st.session_state.selected_index = selected_index
+st.session_state.selected_ticker = ranked_table.loc[selected_index, "Ticker"]
 
 # ---------------------------------------------------------
 # Enhanced Chart Function (stable: price+FIB, then MACD+RSI)
@@ -488,6 +493,7 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
 
 
