@@ -173,13 +173,20 @@ selected_row = st.data_editor(
     use_container_width=True,
     hide_index=True,
     key="ranked_table",
+    column_config={},
+    disabled=True,  # prevents accidental edits
+    features={
+        "rowSelection": {"type": "single"}   # 🔥 THIS ENABLES ROW CLICK
+    }
 )
 
-# Detect which row was clicked
-cursor = st.session_state.get("ranked_table_cursor")
+# Streamlit stores selected rows here:
+selected_rows = st.session_state["ranked_table"]["rowSelection"]["selectedRows"]
 
-if cursor is not None:
+if selected_rows:
+    cursor = selected_rows[0]      # get first selected row index
     st.session_state.selected_ticker = ranked_table.loc[cursor, "Ticker"]
+
 
 
 
@@ -479,6 +486,7 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
 
 
