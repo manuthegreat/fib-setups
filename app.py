@@ -19,6 +19,25 @@ st.set_page_config(
 
 st.title("📈 Momentum & Fib Retracement Dashboard")
 
+st.markdown("""
+### What this app does
+This dashboard scans **all S&P 500, Hang Seng Index (HSI), and Straits Times Index (STI)** companies and identifies names that:
+
+- recently made a swing high  
+- are currently **retracing into Fibonacci support zones**  
+- show signs of **bullish structure, momentum, and rebound strength**  
+- may be presenting **high-probability buying opportunities**
+
+These setups are evaluated using structural signals, retracement depth, momentum confirmation, and pattern behavior.
+""")
+
+# Hide Streamlit sidebar toggle by default
+hide_sidebar = """
+<style>
+    [data-testid="stSidebar"] > div:first-child {display: none;}
+</style>
+"""
+st.markdown(hide_sidebar, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # Sidebar Controls
@@ -324,27 +343,30 @@ def render_summary_card(row):
 
     st.markdown("### 📘 Trading Summary")
 
-    st.markdown(f"""
-    <div style="background-color:#111;padding:15px;border-radius:10px;border:1px solid #444;">
+    st.markdown(
+        f"""
+    <div style="background-color:#f8f9fa;padding:15px;border-radius:10px;border:1px solid #ddd;">
 
-    <h3 style="color:#4CC9F0;">🎯 Overview</h3>
-    <b>Ticker:</b> {row['Ticker']}<br>
-    <b>Signal:</b> {row['FINAL_SIGNAL']}<br>
-    <b>Shape:</b> {row['Shape']}<br>
-    <b>Insights:</b> {row['INSIGHT_TAGS']}<br>
-    <b>Next Action:</b> {row['NEXT_ACTION']}<br><br>
+        <h3 style="color:#4CC9F0;">🎯 Overview</h3>
+        <b>Ticker:</b> {row['Ticker']}<br>
+        <b>Signal:</b> {row['FINAL_SIGNAL']}<br>
+        <b>Shape:</b> {row['Shape']}<br>
+        <b>Insights:</b> {row['INSIGHT_TAGS']}<br>
+        <b>Next Action:</b> {row['NEXT_ACTION']}<br><br>
 
-    <h3 style="color:#4CC9F0;">📈 Interpretation</h3>
-    {format_section(summary, "Interpretation:", "Your Trading Plan")}
+        <h3 style="color:#4CC9F0;">📈 Interpretation</h3>
+        {format_section(summary, "Interpretation:", "Your Trading Plan")}
 
-    <h3 style="color:#4CC9F0;">📝 Trade Plan</h3>
-    {format_section(summary, "Primary Entry:", "No-Trade Conditions:")}
+        <h3 style="color:#4CC9F0;">📝 Trade Plan</h3>
+        {format_section(summary, "Primary Entry:", "No-Trade Conditions:")}
 
-    <h3 style="color:#F72585;">⚠️ Risk Conditions</h3>
-    {format_section(summary, "No-Trade Conditions:", None)}
+        <h3 style="color:#F72585;">⚠️ Risk Conditions</h3>
+        {format_section(summary, "No-Trade Conditions:", None)}
 
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True
+    )
 
 
 def format_section(summary_text, start, end):
@@ -389,6 +411,51 @@ plot_ticker_chart(df_all, row_sel, lookback_days=lookback_days)
 
 render_summary_card(row_sel)
 
+st.write("---")
+st.subheader("📘 Indicator Explanations")
+
+st.markdown("""
+### **Insight Tags**
+These are quick-glance labels that highlight strong structural or momentum characteristics:
+- **🔥 PRIME** – very clean structure, very close to turning into a BUY  
+- **⚡ BOS_IMMINENT** – price is sitting just below the breakout level  
+- **💥 MACD_THRUST** – strong momentum expansion  
+- **📉 SQUEEZE** – tight volatility coil, likely to explode  
+- **🔋 ENERGY_BUILDUP** – rising energy with a narrowing range  
+- **🎯 PERFECT_ENTRY** – exceptionally clean retracement & higher low  
+- *and others…*
+
+---
+
+### **Readiness Score**
+How close a setup is to a confirmed BUY, combining:
+- retracement depth  
+- higher low confirmation  
+- bullish reaction candle  
+- momentum alignment  
+- proximity to BOS  
+
+**100 = ready to break out any moment.**
+
+---
+
+### **Breakout Pressure**
+Measures the “energy” pushing price upward:
+- closeness to BOS  
+- higher-low strength  
+- MACD / RSI thrust  
+- volatility compression  
+
+Higher = stronger probability of breakout continuation.
+
+---
+
+### **Perfect Entry Score**
+Evaluates the **quality of the retracement**, **cleanliness of the higher low**, **shape geometry**, and **proximity to BOS**.
+
+Score > 80 normally signals an institution-grade entry structure.
+""")
+
 
 # ---------------------------------------------------------
 # Insight Summaries List
@@ -398,3 +465,4 @@ render_summary_card(row_sel)
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
