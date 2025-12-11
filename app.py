@@ -158,37 +158,29 @@ with col4:
 
 
 # ---------------------------------------------------------
-# Data Table
+# Data Table (with selection column)
 # ---------------------------------------------------------
 st.write("### Ranked Dashboard (Filtered)")
 
-ranked_table = df_view[[
-    "Ticker", "FINAL_SIGNAL", "Shape",
-    "BREAKOUT_PRESSURE", "PERFECT_ENTRY", "READINESS_SCORE",
-    "INSIGHT_TAGS", "NEXT_ACTION"
-]].reset_index(drop=True)
+ranked_table_display = ranked_table.copy()
+ranked_table_display["Select"] = False  # Add selection column
 
-selected_row = st.data_editor(
-    ranked_table,
+selected_table = st.data_editor(
+    ranked_table_display,
     use_container_width=True,
     hide_index=True,
     key="ranked_table",
-    column_config={},
-    disabled=True,  # prevents accidental edits
-    features={
-        "rowSelection": {"type": "single"}   # 🔥 THIS ENABLES ROW CLICK
-    }
 )
 
-# Streamlit stores selected rows here:
-selected_rows = st.session_state["ranked_table"]["rowSelection"]["selectedRows"]
+# Detect which row was selected (where Select == True)
+selected_rows = [
+    idx for idx, row in selected_table.iterrows()
+    if row["Select"] is True
+]
 
 if selected_rows:
-    cursor = selected_rows[0]      # get first selected row index
-    st.session_state.selected_ticker = ranked_table.loc[cursor, "Ticker"]
-
-
-
+    selected_idx = selected_rows[0]
+    st.session_state.selected_ticker = ranked_table.loc[selected_idx, "Ticker"]
 
 
 # ---------------------------------------------------------
@@ -486,6 +478,7 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
 
 
