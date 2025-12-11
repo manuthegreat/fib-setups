@@ -6,6 +6,48 @@ from plotly.subplots import make_subplots
 from engine import run_engine, generate_trading_summary
 from updater import load_all_market_data
 
+import streamlit.components.v1 as components
+
+def clickable_table(df, key="clickable_table"):
+    df_display = df.reset_index(drop=True)
+    html_table = df_display.to_html(classes="table", index=False, escape=False)
+
+    custom_js = f"""
+    <script>
+    const container = document.querySelector("div[id='{key}']");
+    if (container) {{
+        const rows = container.querySelectorAll("table tbody tr");
+        rows.forEach((row, index) => {{
+            row.style.cursor = "pointer";
+            row.onclick = () => {{
+                const input = document.getElementById("{key}_selected_state");
+                input.value = index;
+                input.dispatchEvent(new Event("input", {{ bubbles: true }}));
+            }};
+        }});
+    }}
+    </script>
+    """
+
+    components.html(
+        f"""
+        <div id="{key}">
+            {html_table}
+        </div>
+        {custom_js}
+        """,
+        height=400,
+        scrolling=True,
+    )
+
+    # Invisible Streamlit input to sync with JS updates
+    selected_index = st.text_input(
+        label="",
+        value="",
+        key=f"{key}_selected_state",
+    )
+
+    return int(selected_index) if selected_index.isdigit() else None
 
 
 
@@ -158,7 +200,7 @@ with col4:
 
 
 # ---------------------------------------------------------
-# Ranked Dashboard (Visual Radio + Functional Radio Below)
+# Ranked Dashboard — Clickable Rows (NO radio, NO checkbox)
 # ---------------------------------------------------------
 st.write("### Ranked Dashboard (Filtered)")
 
@@ -168,36 +210,13 @@ ranked_table = df_view[[
     "INSIGHT_TAGS", "NEXT_ACTION"
 ]].reset_index(drop=True)
 
-# Use stored index if exists
-selected_index = st.session_state.get("selected_index", 0)
+# Show interactive clickable table
+selected_index = clickable_table(ranked_table, key="ranked")
 
-# Add visual-only radio indicator
-ranked_table_display = ranked_table.copy()
-ranked_table_display.insert(
-    0,
-    "Select",
-    ["◉" if i == selected_index else "○" for i in range(len(ranked_table))]
-)
-
-# Show static table
-st.dataframe(
-    ranked_table_display,
-    use_container_width=True,
-    hide_index=True
-)
-
-# Functional radio input BELOW (compact)
-selected_index = st.radio(
-    "",
-    options=list(range(len(ranked_table))),
-    index=selected_index,
-    label_visibility="collapsed",
-    format_func=lambda i: f"{ranked_table.loc[i, 'Ticker']} – {ranked_table.loc[i, 'FINAL_SIGNAL']}"
-)
-
-# Update session state
-st.session_state.selected_index = selected_index
-st.session_state.selected_ticker = ranked_table.loc[selected_index, "Ticker"]
+# Update selected ticker when clicked
+if selected_index is not None and 0 <= selected_index < len(ranked_table):
+    ticker = ranked_table.loc[selected_index, "Ticker"]
+    st.session_state.selected_ticker = ticker
 
 # ---------------------------------------------------------
 # Enhanced Chart Function (stable: price+FIB, then MACD+RSI)
@@ -494,6 +513,7 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
 
 
