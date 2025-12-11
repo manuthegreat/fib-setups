@@ -13,6 +13,8 @@ import requests
 from io import StringIO
 import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import streamlit as st
+
 
 
 
@@ -206,3 +208,4 @@ def load_all_market_data():
 
     print("\nFINAL dataframe shape:", combined.shape)
     return combined
+
