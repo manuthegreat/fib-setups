@@ -158,13 +158,22 @@ with col4:
 
 
 # ---------------------------------------------------------
-# Data Table (with selection column)
+# Ranked Dashboard (Fully Working Click-to-Select Version)
 # ---------------------------------------------------------
 st.write("### Ranked Dashboard (Filtered)")
 
-ranked_table_display = ranked_table.copy()
-ranked_table_display["Select"] = False  # Add selection column
+# 1️⃣ Build ranked table
+ranked_table = df_view[[
+    "Ticker", "FINAL_SIGNAL", "Shape",
+    "BREAKOUT_PRESSURE", "PERFECT_ENTRY", "READINESS_SCORE",
+    "INSIGHT_TAGS", "NEXT_ACTION"
+]].reset_index(drop=True)
 
+# 2️⃣ Add selection column for user click
+ranked_table_display = ranked_table.copy()
+ranked_table_display["Select"] = False
+
+# 3️⃣ Display the table
 selected_table = st.data_editor(
     ranked_table_display,
     use_container_width=True,
@@ -172,7 +181,7 @@ selected_table = st.data_editor(
     key="ranked_table",
 )
 
-# Detect which row was selected (where Select == True)
+# 4️⃣ Detect which row is selected (Select == True)
 selected_rows = [
     idx for idx, row in selected_table.iterrows()
     if row["Select"] is True
@@ -181,7 +190,6 @@ selected_rows = [
 if selected_rows:
     selected_idx = selected_rows[0]
     st.session_state.selected_ticker = ranked_table.loc[selected_idx, "Ticker"]
-
 
 # ---------------------------------------------------------
 # Enhanced Chart Function (stable: price+FIB, then MACD+RSI)
@@ -478,6 +486,7 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
 
 
