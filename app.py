@@ -158,7 +158,7 @@ with col4:
 
 
 # ---------------------------------------------------------
-# Ranked Dashboard (Inline Radio Simulation)
+# Ranked Dashboard (Visual Radio + Functional Radio Below)
 # ---------------------------------------------------------
 st.write("### Ranked Dashboard (Filtered)")
 
@@ -168,10 +168,10 @@ ranked_table = df_view[[
     "INSIGHT_TAGS", "NEXT_ACTION"
 ]].reset_index(drop=True)
 
-# real selected index
+# Use stored index if exists
 selected_index = st.session_state.get("selected_index", 0)
 
-# Build a display table that visually shows a radio indicator
+# Add visual-only radio indicator
 ranked_table_display = ranked_table.copy()
 ranked_table_display.insert(
     0,
@@ -179,22 +179,23 @@ ranked_table_display.insert(
     ["◉" if i == selected_index else "○" for i in range(len(ranked_table))]
 )
 
-# Show table (static)
+# Show static table
 st.dataframe(
     ranked_table_display,
     use_container_width=True,
     hide_index=True
 )
 
-# Real radio input (hidden visually)
+# Functional radio input BELOW (compact)
 selected_index = st.radio(
-    "Select a ticker:",
+    "",
     options=list(range(len(ranked_table))),
     index=selected_index,
+    label_visibility="collapsed",
     format_func=lambda i: f"{ranked_table.loc[i, 'Ticker']} – {ranked_table.loc[i, 'FINAL_SIGNAL']}"
 )
 
-# Update stored selection
+# Update session state
 st.session_state.selected_index = selected_index
 st.session_state.selected_ticker = ranked_table.loc[selected_index, "Ticker"]
 
@@ -493,6 +494,7 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
 
 
