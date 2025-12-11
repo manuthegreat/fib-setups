@@ -343,40 +343,38 @@ def render_summary_card(row):
 
     st.markdown("### 📘 Trading Summary")
 
-    st.markdown(
-        f"""
-    <div style="background-color:#f8f9fa;padding:15px;border-radius:10px;border:1px solid #ddd;">
+    html = f"""
+    <div style="background-color:#f8f9fa;padding:20px;border-radius:10px;border:1px solid #ddd; font-size:15px;">
 
-        <h3 style="color:#4CC9F0;">🎯 Overview</h3>
+        <h3 style="color:#4CC9F0; margin-bottom:5px;">🎯 Overview</h3>
         <b>Ticker:</b> {row['Ticker']}<br>
         <b>Signal:</b> {row['FINAL_SIGNAL']}<br>
         <b>Shape:</b> {row['Shape']}<br>
         <b>Insights:</b> {row['INSIGHT_TAGS']}<br>
         <b>Next Action:</b> {row['NEXT_ACTION']}<br><br>
 
-        <h3 style="color:#4CC9F0;">📈 Interpretation</h3>
+        <h3 style="color:#4CC9F0; margin-bottom:5px;">📈 Interpretation</h3>
         {format_section(summary, "Interpretation:", "Your Trading Plan")}
 
-        <h3 style="color:#4CC9F0;">📝 Trade Plan</h3>
+        <h3 style="color:#4CC9F0; margin-bottom:5px;">📝 Trade Plan</h3>
         {format_section(summary, "Primary Entry:", "No-Trade Conditions:")}
 
-        <h3 style="color:#F72585;">⚠️ Risk Conditions</h3>
+        <h3 style="color:#F72585; margin-bottom:5px;">⚠️ Risk Conditions</h3>
         {format_section(summary, "No-Trade Conditions:", None)}
 
     </div>
-    """,
-        unsafe_allow_html=True
-    )
+    """
 
+    st.markdown(html, unsafe_allow_html=True)
 
 def format_section(summary_text, start, end):
     try:
-        section = summary_text.split(start)[1]
+        section = summary_text.split(start, 1)[1]
         if end:
-            section = section.split(end)[0]
-        lines = [f"• {x.strip()}" for x in section.split("\n") if x.strip()]
+            section = section.split(end, 1)[0]
+        lines = [f"• {line.strip()}" for line in section.split("\n") if line.strip()]
         return "<br>".join(lines)
-    except:
+    except Exception:
         return "N/A"
 
 
@@ -465,4 +463,5 @@ Score > 80 normally signals an institution-grade entry structure.
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
+
 
