@@ -6,50 +6,6 @@ from plotly.subplots import make_subplots
 from engine import run_engine, generate_trading_summary
 from updater import load_all_market_data
 
-import streamlit.components.v1 as components
-
-def clickable_table(df, key="clickable_table"):
-    df_display = df.reset_index(drop=True)
-    html_table = df_display.to_html(classes="table", index=False, escape=False)
-
-    custom_js = f"""
-    <script>
-    const container = document.querySelector("div[id='{key}']");
-    if (container) {{
-        const rows = container.querySelectorAll("table tbody tr");
-        rows.forEach((row, index) => {{
-            row.style.cursor = "pointer";
-            row.onclick = () => {{
-                const input = document.getElementById("{key}_selected_state");
-                input.value = index;
-                input.dispatchEvent(new Event("input", {{ bubbles: true }}));
-            }};
-        }});
-    }}
-    </script>
-    """
-
-    components.html(
-        f"""
-        <div id="{key}">
-            {html_table}
-        </div>
-        {custom_js}
-        """,
-        height=400,
-        scrolling=True,
-    )
-
-    # Invisible Streamlit input to sync with JS updates
-    selected_index = st.text_input(
-        label="",
-        value="",
-        key=f"{key}_selected_state",
-    )
-
-    return int(selected_index) if selected_index.isdigit() else None
-
-
 
 # ---------------------------------------------------------
 # Streamlit Page Setup
@@ -85,8 +41,6 @@ st.markdown(hide_sidebar, unsafe_allow_html=True)
 # Sidebar Controls
 # ---------------------------------------------------------
 st.sidebar.header("Settings")
-
-
 
 min_readiness = st.sidebar.slider(
     "Min Readiness Score",
@@ -132,19 +86,17 @@ INSIGHT_OPTIONS = [
     "📈 EARLY_BOS",
     "🔋 ENERGY_BUILDUP",
     "🔄 REVERSAL_CONFIRM",
-    "🛑 EXTENDED"
+    "🛑 EXTENDED",
 ]
 
 selected_insights = st.sidebar.multiselect(
     "Show tickers with any selected tags:",
     INSIGHT_OPTIONS,
-    default=[]
+    default=[],
 )
 
 st.sidebar.write("---")
 st.sidebar.write("Run this daily after market close / before open.")
-
-
 
 
 # -----------------------------
@@ -154,6 +106,7 @@ st.sidebar.write("Run this daily after market close / before open.")
 def compute_dashboard():
     df_all, combined, insight_df = run_engine()
     return df_all, combined, insight_df
+
 
 df_all, combined, insight_df = compute_dashboard()
 
@@ -200,35 +153,55 @@ with col4:
 
 
 # ---------------------------------------------------------
-# Ranked Dashboard — Clickable Rows (NO radio, NO checkbox)
+# Ranked Dashboard — Row-click selection using st.dataframe
 # ---------------------------------------------------------
 st.write("### Ranked Dashboard (Filtered)")
 
-ranked_table = df_view[[
-    "Ticker", "FINAL_SIGNAL", "Shape",
-    "BREAKOUT_PRESSURE", "PERFECT_ENTRY", "READINESS_SCORE",
-    "INSIGHT_TAGS", "NEXT_ACTION"
-]].reset_index(drop=True)
+ranked_table = df_view[
+    [
+        "Ticker",
+        "FINAL_SIGNAL",
+        "Shape",
+        "BREAKOUT_PRESSURE",
+        "PERFECT_ENTRY",
+        "READINESS_SCORE",
+        "INSIGHT_TAGS",
+        "NEXT_ACTION",
+    ]
+].reset_index(drop=True)
 
-# Show interactive clickable table
-selected_index = clickable_table(ranked_table, key="ranked")
+event = st.dataframe(
+    ranked_table,
+    hide_index=True,
+    width="stretch",
+    key="ranked_df",
+    on_select="rerun",
+    selection_mode="single-row",
+)
 
-# Update selected ticker when clicked
-if selected_index is not None and 0 <= selected_index < len(ranked_table):
-    ticker = ranked_table.loc[selected_index, "Ticker"]
-    st.session_state.selected_ticker = ticker
+# Handle selection
+selected_rows = getattr(event, "selection", {}).get("rows", []) if hasattr(event, "selection") else []
+
+if "selected_ticker" not in st.session_state:
+    st.session_state.selected_ticker = None
+
+if selected_rows:
+    # DataframeSelectionState.rows are integer positions in the original df
+    selected_idx = selected_rows[0]
+    st.session_state.selected_ticker = ranked_table.iloc[selected_idx]["Ticker"]
+
+ticker_selected = st.session_state.selected_ticker
+
 
 # ---------------------------------------------------------
 # Enhanced Chart Function (stable: price+FIB, then MACD+RSI)
 # ---------------------------------------------------------
 def plot_ticker_chart(df_all, row, lookback_days=180):
-    import numpy as np
+    import numpy as np  # noqa: F401
 
     ticker = row["Ticker"]
 
-    # -----------------------------
     # 1. Load full history & compute indicators
-    # -----------------------------
     df_full = df_all[df_all["Ticker"] == ticker].sort_values("Date").copy()
     if df_full.empty:
         st.write("No price data found.")
@@ -258,12 +231,9 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
     # Slice for display
     df_t = df_full.tail(lookback_days).copy()
 
-    # =====================================================
-    # 2. PRICE + FIB + MAs (figure 1)
-    # =====================================================
+    # 2. PRICE + FIB + MAs
     fig_price = go.Figure()
 
-    # Candlesticks
     fig_price.add_trace(
         go.Candlestick(
             x=df_t["Date"],
@@ -271,16 +241,14 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
             high=df_t["High"],
             low=df_t["Low"],
             close=df_t["Close"],
-            name=ticker
+            name=ticker,
         )
     )
 
-    # MAs
     fig_price.add_trace(go.Scatter(x=df_t["Date"], y=df_t["SMA10"], name="SMA10"))
     fig_price.add_trace(go.Scatter(x=df_t["Date"], y=df_t["EMA20"], name="EMA20"))
     fig_price.add_trace(go.Scatter(x=df_t["Date"], y=df_t["EMA50"], name="EMA50"))
 
-    # FIB levels
     swing_low = row["SwingLow"]
     swing_high = row["SwingHigh"]
 
@@ -290,7 +258,7 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
             "100%": swing_high,
             "78.6%": swing_high - 0.786 * swing,
             "61.8%": swing_high - 0.618 * swing,
-            "50%":  swing_high - 0.500 * swing,
+            "50%": swing_high - 0.500 * swing,
             "38.2%": swing_high - 0.382 * swing,
             "0%": swing_low,
         }
@@ -301,9 +269,11 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
         for label, level in fib_levels.items():
             fig_price.add_shape(
                 type="line",
-                x0=x0, x1=x1,
-                y0=level, y1=level,
-                line=dict(color="green", width=1, dash="dot")
+                x0=x0,
+                x1=x1,
+                y0=level,
+                y1=level,
+                line=dict(color="green", width=1, dash="dot"),
             )
             fig_price.add_annotation(
                 x=x1,
@@ -312,7 +282,7 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
                 showarrow=False,
                 xanchor="left",
                 yanchor="middle",
-                font=dict(size=10, color="green")
+                font=dict(size=10, color="green"),
             )
 
     fig_price.update_layout(
@@ -321,14 +291,12 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
         margin=dict(l=0, r=0, t=20, b=10),
         xaxis_title="Date",
         yaxis_title="Price",
-        xaxis_rangeslider_visible=False,   # 🔴 turn off mini candle chart
+        xaxis_rangeslider_visible=False,
     )
 
     st.plotly_chart(fig_price, use_container_width=True)
 
-    # =====================================================
-    # 3. MACD + RSI (figure 2, two subplots, NO OHLC)
-    # =====================================================
+    # 3. MACD + RSI
     fig_osc = make_subplots(
         rows=2,
         cols=1,
@@ -339,33 +307,31 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
 
     dates = df_t["Date"]
 
-    # --- MACD panel (row 1) ---
     fig_osc.add_hline(y=0, line=dict(color="white", width=1), row=1, col=1)
 
     fig_osc.add_trace(
         go.Bar(
             x=dates,
             y=df_t["MACDH"],
-            marker_color=df_t["MACDH"].apply(lambda v: "green" if v >= 0 else "red"),
+            marker_color=df_t["MACDH"].apply(
+                lambda v: "green" if v >= 0 else "red"
+            ),
             opacity=0.45,
             name="MACDH",
         ),
-        row=1, col=1
+        row=1,
+        col=1,
     )
 
     fig_osc.add_trace(
-        go.Scatter(x=dates, y=df_t["MACD"], name="MACD"),
-        row=1, col=1
+        go.Scatter(x=dates, y=df_t["MACD"], name="MACD"), row=1, col=1
     )
     fig_osc.add_trace(
-        go.Scatter(x=dates, y=df_t["Signal"], name="Signal"),
-        row=1, col=1
+        go.Scatter(x=dates, y=df_t["Signal"], name="Signal"), row=1, col=1
     )
 
-    # --- RSI panel (row 2) ---
     fig_osc.add_trace(
-        go.Scatter(x=dates, y=df_t["RSI"], name="RSI"),
-        row=2, col=1
+        go.Scatter(x=dates, y=df_t["RSI"], name="RSI"), row=2, col=1
     )
     fig_osc.add_hline(y=70, line=dict(color="red", dash="dot"), row=2, col=1)
     fig_osc.add_hline(y=30, line=dict(color="green", dash="dot"), row=2, col=1)
@@ -377,14 +343,26 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
         height=320,
         showlegend=False,
         margin=dict(l=0, r=0, t=10, b=20),
-        xaxis_rangeslider_visible=False,   # 🔴 also off here for cleanliness
+        xaxis_rangeslider_visible=False,
     )
 
     st.plotly_chart(fig_osc, use_container_width=True)
 
+
 # ---------------------------------------------------------
 # Enhanced Trading Summary Card
 # ---------------------------------------------------------
+def format_section(summary_text, start, end):
+    try:
+        section = summary_text.split(start, 1)[1]
+        if end:
+            section = section.split(end, 1)[0]
+        lines = [f"• {line.strip()}" for line in section.split("\n") if line.strip()]
+        return "<br>".join(lines)
+    except Exception:
+        return "N/A"
+
+
 def render_summary_card(row):
     summary = generate_trading_summary(row)
 
@@ -415,32 +393,17 @@ def render_summary_card(row):
 
 </div>
 """
-
     st.markdown(html, unsafe_allow_html=True)
-
-def format_section(summary_text, start, end):
-    try:
-        section = summary_text.split(start, 1)[1]
-        if end:
-            section = section.split(end, 1)[0]
-        lines = [f"• {line.strip()}" for line in section.split("\n") if line.strip()]
-        return "<br>".join(lines)
-    except:
-        return "N/A"
 
 
 # ---------------------------------------------------------
 # Ticker Drilldown
 # ---------------------------------------------------------
-# Get selected ticker
-ticker_selected = st.session_state.get("selected_ticker", None)
-
 if ticker_selected:
     row_sel = df_view[df_view["Ticker"] == ticker_selected].iloc[0]
 
     st.write(f"### 📌 Selected: **{ticker_selected}**")
-    
-    # Top metrics
+
     colA, colB, colC, colD = st.columns(4)
     with colA:
         st.metric("Signal", row_sel["FINAL_SIGNAL"])
@@ -449,14 +412,17 @@ if ticker_selected:
     with colC:
         st.metric("Breakout Pressure", f"{row_sel['BREAKOUT_PRESSURE']:.2f}")
     with colD:
-        st.metric("Perfect Entry", f"{row_sel['PERFECT_ENTRY']:.2f}" if pd.notna(row_sel["PERFECT_ENTRY"]) else "N/A")
+        st.metric(
+            "Perfect Entry",
+            f"{row_sel['PERFECT_ENTRY']:.2f}"
+            if pd.notna(row_sel["PERFECT_ENTRY"])
+            else "N/A",
+        )
 
     plot_ticker_chart(df_all, row_sel, lookback_days=lookback_days)
-
     render_summary_card(row_sel)
 else:
     st.info("Click a row in the table to display charts and trading summary.")
-
 
 
 st.write("---")
@@ -503,25 +469,3 @@ Evaluates the **quality of the retracement**, **cleanliness of the higher low**,
 
 Score > 80 normally signals an institution-grade entry structure.
 """)
-
-
-# ---------------------------------------------------------
-# Insight Summaries List
-# ---------------------------------------------------------
-#st.write("### All Insight Tickers – Summaries")
-
-#for _, r in df_view.iterrows():
-#    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
-#        render_summary_card(r)
-
-
-
-
-
-
-
-
-
-
-
-
