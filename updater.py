@@ -177,7 +177,7 @@ def download_yahoo_prices(tickers, label, period="600d", max_workers=20):
 # ==========================================================
 # 3. MASTER FUNCTION CALLED BY ENGINE / DASHBOARD
 # ==========================================================
-
+@st.cache_data(show_spinner=True, ttl=3600)
 def load_all_market_data():
     """
     Returns a merged OHLC dataframe for:
@@ -208,4 +208,5 @@ def load_all_market_data():
 
     print("\nFINAL dataframe shape:", combined.shape)
     return combined
+
 
