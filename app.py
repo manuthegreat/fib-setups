@@ -80,6 +80,8 @@ selected_insights = st.sidebar.multiselect(
     default=[]
 )
 
+st.sidebar.write("---")
+st.sidebar.write("Run this daily after market close / before open.")
 
 
 
@@ -93,7 +95,6 @@ def compute_dashboard():
     return df_all, combined, insight_df
 
 df_all, combined, insight_df = compute_dashboard()
-st.success("Data loaded from cache")
 
 if combined.empty:
     st.error("No names in watchlist / combined. Check data or parameters.")
@@ -397,5 +398,3 @@ render_summary_card(row_sel)
 #for _, r in df_view.iterrows():
 #    with st.expander(f"{r['Ticker']}  |  {r['INSIGHT_TAGS']}"):
 #        render_summary_card(r)
-
-
