@@ -46,7 +46,7 @@ min_readiness = st.sidebar.slider(
     "Min Readiness Score",
     min_value=0,
     max_value=100,
-    value=80,
+    value=0,
     step=1,
 )
 
@@ -54,13 +54,13 @@ min_pressure = st.sidebar.slider(
     "Min Breakout Pressure",
     min_value=0,
     max_value=100,
-    value=50,
+    value=0,
     step=1,
 )
 
 show_only_insights = st.sidebar.checkbox(
     "Show only insight names (INSIGHT_TAGS != '')",
-    value=True,
+    value=False,
 )
 
 lookback_days = st.sidebar.slider(
@@ -469,5 +469,6 @@ Evaluates the **quality of the retracement**, **cleanliness of the higher low**,
 
 Score > 80 normally signals an institution-grade entry structure.
 """)
+
 
 
