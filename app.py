@@ -15,7 +15,7 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("📈 Momentum & Fib Retracement Dashboard")
+st.title("📈 Fib Retracement Dashboard")
 
 st.markdown("""
 ### What this app does
@@ -469,4 +469,5 @@ Evaluates the **quality of the retracement**, **cleanliness of the higher low**,
 
 Score > 80 normally signals an institution-grade entry structure.
 """)
+
 
