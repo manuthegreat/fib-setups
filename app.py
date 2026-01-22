@@ -204,7 +204,7 @@ ticker_selected = st.session_state.selected_ticker
 
 
 # ---------------------------------------------------------
-# Enhanced Chart Function (stable: price+FIB, then MACD+RSI)
+# Enhanced Chart Function (combined: price + MACD + RSI)
 # ---------------------------------------------------------
 def plot_ticker_chart(df_all, row, lookback_days=180):
     import numpy as np  # noqa: F401
@@ -240,24 +240,32 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
 
     # Slice for display
     df_t = df_full.tail(lookback_days).copy()
+    dates = df_t["Date"]
 
-    # 2. PRICE + FIB + MAs
-    fig_price = go.Figure()
+    fig = make_subplots(
+        rows=3,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.03,
+        row_heights=[0.6, 0.2, 0.2],
+    )
 
-    fig_price.add_trace(
+    # Price + MAs
+    fig.add_trace(
         go.Candlestick(
-            x=df_t["Date"],
+            x=dates,
             open=df_t["Open"],
             high=df_t["High"],
             low=df_t["Low"],
             close=df_t["Close"],
             name=ticker,
-        )
+        ),
+        row=1,
+        col=1,
     )
-
-    fig_price.add_trace(go.Scatter(x=df_t["Date"], y=df_t["SMA10"], name="SMA10"))
-    fig_price.add_trace(go.Scatter(x=df_t["Date"], y=df_t["EMA20"], name="EMA20"))
-    fig_price.add_trace(go.Scatter(x=df_t["Date"], y=df_t["EMA50"], name="EMA50"))
+    fig.add_trace(go.Scatter(x=dates, y=df_t["SMA10"], name="SMA10"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=dates, y=df_t["EMA20"], name="EMA20"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=dates, y=df_t["EMA50"], name="EMA50"), row=1, col=1)
 
     swing_low = row["SwingLow"]
     swing_high = row["SwingHigh"]
@@ -273,19 +281,21 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
             "0%": swing_low,
         }
 
-        x0 = df_t["Date"].iloc[0]
-        x1 = df_t["Date"].iloc[-1]
+        x0 = dates.iloc[0]
+        x1 = dates.iloc[-1]
 
         for label, level in fib_levels.items():
-            fig_price.add_shape(
+            fig.add_shape(
                 type="line",
                 x0=x0,
                 x1=x1,
                 y0=level,
                 y1=level,
                 line=dict(color="green", width=1, dash="dot"),
+                row=1,
+                col=1,
             )
-            fig_price.add_annotation(
+            fig.add_annotation(
                 x=x1,
                 y=level,
                 text=label,
@@ -293,33 +303,13 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
                 xanchor="left",
                 yanchor="middle",
                 font=dict(size=10, color="green"),
+                row=1,
+                col=1,
             )
 
-    fig_price.update_layout(
-        height=480,
-        showlegend=False,
-        margin=dict(l=0, r=0, t=20, b=10),
-        xaxis_title="Date",
-        yaxis_title="Price",
-        xaxis_rangeslider_visible=False,
-    )
-
-    st.plotly_chart(fig_price, use_container_width=True)
-
-    # 3. MACD + RSI
-    fig_osc = make_subplots(
-        rows=2,
-        cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.03,
-        row_heights=[0.55, 0.45],
-    )
-
-    dates = df_t["Date"]
-
-    fig_osc.add_hline(y=0, line=dict(color="white", width=1), row=1, col=1)
-
-    fig_osc.add_trace(
+    # MACD
+    fig.add_hline(y=0, line=dict(color="white", width=1), row=2, col=1)
+    fig.add_trace(
         go.Bar(
             x=dates,
             y=df_t["MACDH"],
@@ -329,34 +319,31 @@ def plot_ticker_chart(df_all, row, lookback_days=180):
             opacity=0.45,
             name="MACDH",
         ),
-        row=1,
+        row=2,
         col=1,
     )
-
-    fig_osc.add_trace(
-        go.Scatter(x=dates, y=df_t["MACD"], name="MACD"), row=1, col=1
-    )
-    fig_osc.add_trace(
-        go.Scatter(x=dates, y=df_t["Signal"], name="Signal"), row=1, col=1
+    fig.add_trace(go.Scatter(x=dates, y=df_t["MACD"], name="MACD"), row=2, col=1)
+    fig.add_trace(
+        go.Scatter(x=dates, y=df_t["Signal"], name="Signal"), row=2, col=1
     )
 
-    fig_osc.add_trace(
-        go.Scatter(x=dates, y=df_t["RSI"], name="RSI"), row=2, col=1
-    )
-    fig_osc.add_hline(y=70, line=dict(color="red", dash="dot"), row=2, col=1)
-    fig_osc.add_hline(y=30, line=dict(color="green", dash="dot"), row=2, col=1)
+    # RSI
+    fig.add_trace(go.Scatter(x=dates, y=df_t["RSI"], name="RSI"), row=3, col=1)
+    fig.add_hline(y=70, line=dict(color="red", dash="dot"), row=3, col=1)
+    fig.add_hline(y=30, line=dict(color="green", dash="dot"), row=3, col=1)
 
-    fig_osc.update_yaxes(title_text="MACD", row=1, col=1)
-    fig_osc.update_yaxes(title_text="RSI", row=2, col=1, range=[0, 100])
+    fig.update_yaxes(title_text="Price", row=1, col=1)
+    fig.update_yaxes(title_text="MACD", row=2, col=1)
+    fig.update_yaxes(title_text="RSI", row=3, col=1, range=[0, 100])
 
-    fig_osc.update_layout(
-        height=320,
+    fig.update_layout(
+        height=760,
         showlegend=False,
-        margin=dict(l=0, r=0, t=10, b=20),
+        margin=dict(l=0, r=0, t=20, b=20),
         xaxis_rangeslider_visible=False,
     )
 
-    st.plotly_chart(fig_osc, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # ---------------------------------------------------------
