@@ -173,14 +173,24 @@ ranked_table = df_view[
 event = st.dataframe(
     ranked_table,
     hide_index=True,
-    width="stretch",
+    use_container_width=True,
     key="ranked_df",
     on_select="rerun",
     selection_mode="single-row",
 )
 
-# Handle selection
-selected_rows = getattr(event, "selection", {}).get("rows", []) if hasattr(event, "selection") else []
+# Handle selection for newer/older Streamlit selection payloads
+selected_rows = []
+if event is not None:
+    if hasattr(event, "selection") and hasattr(event.selection, "rows"):
+        selected_rows = event.selection.rows
+    elif hasattr(event, "rows"):
+        selected_rows = event.rows
+    elif isinstance(event, dict):
+        if "selection" in event and isinstance(event["selection"], dict):
+            selected_rows = event["selection"].get("rows", [])
+        else:
+            selected_rows = event.get("rows", [])
 
 if "selected_ticker" not in st.session_state:
     st.session_state.selected_ticker = None
